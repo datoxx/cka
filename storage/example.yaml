@@ -1,0 +1,84 @@
+---
+#just volume on host
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-example-linux
+spec:
+  os: { name: linux }
+  nodeSelector:
+    kubernetes.io/os: linux
+  containers:
+  - name: example-container
+    image: registry.k8s.io/test-webserver
+    volumeMounts:
+    - mountPath: /foo
+      name: example-volume
+      readOnly: true
+  volumes:
+  - name: example-volume
+    # mount /data/foo, but only if that directory already exists
+    hostPath:
+      path: /data/foo # directory location on host
+      type: Directory # this field is optional
+---
+
+
+#create persisten volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: block-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  persistentVolumeReclaimPolicy: Retain
+  fc:
+    targetWWNs: ["50060e801049cfd1"]
+    lun: 0
+    readOnly: false
+---
+# match claim to above pv
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: block-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  resources:
+    requests:
+      storage: 10Gi
+---
+# use above  pvc to pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-with-block-volume
+spec:
+  containers:
+    - name: fc-container
+      image: fedora:26
+      command: ["/bin/sh", "-c"]
+      args: [ "tail -f /dev/null" ]
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: block-pvc
+
+---
+#storage class
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: low-latency
+provisioner: csi-driver.example-vendor.example
+reclaimPolicy: Retain # default value is Delete
+volumeBindingMode: WaitForFirstConsumer
