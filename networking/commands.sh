@@ -116,3 +116,18 @@ kubectl logs kube-proxy-g2nzn -n kube-system
 
 iptables -L -t nat | grep db-service # see iptabes rules cerated by kube-proxy for service, type: clusterIp 
 cat /var/log/kube-proxy.log # see what proxyier is used and iptables, this log file path depend  on instalation
+
+
+#DNS in kubernetes
+curl http://web.service.apps.svc.cluster.local  #fully qualified dommain name for service, web.service = pod's service name, apps = namespac where service  is, svc = service group, cluster.local = root domain
+curl http://10-244-2-5.apps.pod.cluster.local  #fully qualified dommain name for pod, 10-244-2-5e = pod's ip , apps = namespace where pod is, pod = pod group, cluster.local = root domain. yuo should enable pod dns record explicity
+
+/etc/coredns/Corefile # core configuration file for coreDNS, this file pass in coreDNS pod as configmap object
+#coreDNS when deployed as pod in cluser its creats service kube-dns which used in pod'S nameserver to reach coreDNS, its done by automatically by kubelet, when new pod created
+/var/lib/kubelet/config.yaml # config file of the kubelet
+
+
+#ingress
+kubectl create ingress ingress-name  --rule="/pay=serviceName:8080" -n namespace-name # create simple ingress object  with 1 rule
+kubectl get ingress # see ingress object (resource)
+
